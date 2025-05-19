@@ -8,6 +8,7 @@ import pandas as pd
 from datetime import datetime
 from collections import defaultdict
 import num2words
+from invoice_generato import InvoiceDocGenerator
 
 
 class RecordProcessor:
@@ -285,6 +286,12 @@ def main():
         processor.display_results()
         print("\n" + "="*50)
         print("Generating invoices...")
+        invoice_generator = InvoiceDocGenerator(
+            template_path="Invoice format.docx",
+            output_dir="generated_invoices",
+            data_list=processed_records
+        )
+        invoice_generator.generate_documents()
     except FileNotFoundError:
         print("\nMain data file not found.")
 
