@@ -9,6 +9,7 @@ class InvoiceDocGenerator:
 
         os.makedirs(self.output_dir, exist_ok=True)
 
+        # Placeholder-to-field mapping
         self.mapping = {
             "Col A": "Date of Entry",
             "Col B": "Amount",
@@ -37,9 +38,12 @@ class InvoiceDocGenerator:
             self._replace_text_in_para(para, data)
 
         for table in doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    self._replace_text_in_para(cell, data)
+            if self._is_invoice_item_table(table):
+                self._fill_invoice_rows_in_place(table, data)
+            else:
+                for row in table.rows:
+                    for cell in row.cells:
+                        self._replace_text_in_para(cell, data)
 
     def _replace_text_in_para(self, container, data):
         for placeholder, key in self.mapping.items():
@@ -47,11 +51,42 @@ class InvoiceDocGenerator:
             if placeholder in container.text:
                 container.text = container.text.replace(placeholder, value)
 
+    def _is_invoice_item_table(self, table):
+        # Identify table by checking headers
+        headers = [cell.text.strip().lower() for cell in table.rows[0].cells]
+        expected = ['sr. no.', 'description', 'unit', 'unit/ price', 'amount']
+        return all(any(header == e for header in headers) for e in expected)
+
+    def _fill_invoice_rows_in_place(self, table, data):
+        descriptions = data.get("Description", [])
+        amounts = data.get("Amount", [])
+
+        if not isinstance(descriptions, list):
+            descriptions = [descriptions]
+        if not isinstance(amounts, list):
+            amounts = [amounts]
+
+        if len(descriptions) != len(amounts):
+            print("Mismatch between Description and Amount lists.")
+            return
+
+        row_index = 1  # skip header row
+        for i, (desc, amt) in enumerate(zip(descriptions, amounts), start=1):
+            if row_index >= len(table.rows):
+                print("Not enough rows available in the template to insert all items.")
+                break
+
+            row = table.rows[row_index]
+            cells = row.cells
+            if len(cells) < 5:
+                continue  
+
+            cells[0].text = str(i)           
+            cells[1].text = str(desc)                   
+            cells[-1].text = str(amt)       
+            row_index += 1
+
     def _replace_self_generates(self, doc, data):
-        """
-        Replace first, third, and fourth occurrence of 'Self generate'
-        with Invoice Number, Total Amount, and Total Amount in Words.
-        """
         count = 0
 
         def replace_in_text(text):
@@ -70,15 +105,13 @@ class InvoiceDocGenerator:
                 elif count == 4:
                     replacement = data.get("Total Amount in Words", "")
                 else:
-                    replacement = "self generate"
+                    replacement = "Self generate"
                 result += replacement + parts[i]
             return result
 
-        # Replace in paragraphs
         for para in doc.paragraphs:
             para.text = replace_in_text(para.text)
 
-        # Replace in tables
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
