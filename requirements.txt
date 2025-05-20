@@ -1,0 +1,3 @@
+pandas
+num2words
+tk 
