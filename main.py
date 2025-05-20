@@ -8,7 +8,9 @@ import pandas as pd
 from datetime import datetime
 from collections import defaultdict
 import num2words
-from invoice_generato import InvoiceDocGenerator
+from invoice_generato import InvoiceDocGeneratorXML
+from mail_invoice import send_invoices_for_records
+import getpass
 
 
 class RecordProcessor:
@@ -286,12 +288,21 @@ def main():
         processor.display_results()
         print("\n" + "="*50)
         print("Generating invoices...")
-        invoice_generator = InvoiceDocGenerator(
+        invoice_generator = InvoiceDocGeneratorXML(
             template_path="Invoice format.docx",
             output_dir="generated_invoices",
             data_list=processed_records
         )
         invoice_generator.generate_documents()
+        # Email functionality
+        sender_email = "geetanshjoshi007@gmail.com"
+        sender_password = getpass.getpass("Enter sender email password: ")
+        send_invoices_for_records(
+            processed_records,
+            "generated_invoices",
+            sender_email,
+            sender_password
+        )
     except FileNotFoundError:
         print("\nMain data file not found.")
 
