@@ -45,6 +45,10 @@ class RecordProcessor:
         
         for record in all_records:
             if self._validate_record(record):
+                date = record.get('Date of Entry')
+                if isinstance(date, str):
+                    date = datetime.strptime(date, '%Y-%m-%d').date()
+                record['Date of Entry'] = date.date()
                 self.original_records.append(record)
             else:
                 self.invalid_records.append(record)
